@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Journal de trading</title>
+<meta name="theme-color" content="#E9EEF2" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0F1720" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Journal">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#E9EEF2; --surface:#FFFFFF; --ink:#16212C; --muted:#5E6B78; --line:#CBD4DC;
+  --gain:#137A5F; --gain-soft:#D7EFE7; --loss:#B93A30; --loss-soft:#F6DEDB; --accent:#2B4C7E;
+  color-scheme:light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F1720; --surface:#18232F; --ink:#E6ECF2; --muted:#93A1AF; --line:#2C3A48;
+    --gain:#3CC79E; --gain-soft:#173B33; --loss:#F07467; --loss-soft:#43231F; --accent:#8FB1E6;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0F1720; --surface:#18232F; --ink:#E6ECF2; --muted:#93A1AF; --line:#2C3A48;
+  --gain:#3CC79E; --gain-soft:#173B33; --loss:#F07467; --loss-soft:#43231F; --accent:#8FB1E6;
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Bricolage Grotesque",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:16px;line-height:1.45;padding-bottom:84px}
+main{max-width:640px;margin:0 auto;padding:16px}
+h1{font-size:15px;font-weight:600;color:var(--muted);margin:4px 0 0}
+h2{font-size:20px;font-weight:800;margin:28px 0 10px}
+.hero{padding:8px 0 4px}
+.total{font-size:clamp(44px,13vw,72px);font-weight:800;letter-spacing:-0.03em;line-height:1;margin:6px 0 4px;font-variant-numeric:tabular-nums}
+.total.pos{color:var(--gain)} .total.neg{color:var(--loss)}
+.sub{color:var(--muted);font-size:14px}
+.curve{width:100%;height:150px;display:block;margin-top:14px}
+.empty{background:var(--surface);border:1px dashed var(--line);border-radius:14px;padding:22px;text-align:center;color:var(--muted)}
+.empty button{margin-top:12px}
+.trade{display:grid;grid-template-columns:1fr auto;gap:2px 12px;padding:14px 4px;border-bottom:1px solid var(--line);cursor:pointer;background:none;border-left:0;border-right:0;border-top:0;width:100%;text-align:left;color:inherit;font:inherit}
+.trade:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:8px}
+.t-main{font-weight:600}
+.t-side{font-size:12px;font-weight:600;padding:2px 8px;border-radius:99px;margin-left:6px;vertical-align:2px;background:var(--bg);color:var(--muted)}
+.t-meta{color:var(--muted);font-size:13px}
+.t-res{text-align:right;font-weight:800;font-variant-numeric:tabular-nums}
+.t-res.pos{color:var(--gain)} .t-res.neg{color:var(--loss)} .t-res.open{color:var(--accent);font-weight:600}
+.t-r{text-align:right;color:var(--muted);font-size:13px;font-variant-numeric:tabular-nums}
+form{display:grid;gap:14px}
+label{display:grid;gap:6px;font-size:14px;font-weight:600}
+.hint{font-weight:400;color:var(--muted);font-size:13px}
+input,select,textarea{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:11px 12px;width:100%}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:0;border-color:transparent}
+textarea{min-height:80px;resize:vertical}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.seg{display:flex;gap:8px;flex-wrap:wrap}
+.seg button{font:inherit;font-size:14px;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:99px;padding:8px 14px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.seg.side button[data-v="achat"][aria-pressed="true"]{background:var(--gain);border-color:var(--gain);color:#fff}
+.seg.side button[data-v="vente"][aria-pressed="true"]{background:var(--loss);border-color:var(--loss);color:#fff}
+.preview{background:var(--surface);border-radius:12px;padding:12px 14px;font-size:14px;color:var(--muted)}
+.preview b{color:var(--ink)}
+.btn{font:inherit;font-weight:600;border:0;border-radius:12px;padding:13px 18px;cursor:pointer;background:var(--accent);color:#fff}
+:root[data-theme="dark"] .btn{color:#0F1720}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .btn{color:#0F1720}}
+.btn.ghost{background:transparent;color:var(--loss);border:1px solid var(--line)}
+.actions{display:flex;gap:10px;justify-content:space-between}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.stat{background:var(--surface);padding:14px}
+.stat .v{font-size:26px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.1}
+.stat .k{font-size:13px;color:var(--muted)}
+.explain{font-size:14px;color:var(--muted);margin:10px 2px 0}
+table{width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}
+th,td{padding:10px 6px;border-bottom:1px solid var(--line);text-align:right}
+th:first-child,td:first-child{text-align:left}
+th{font-weight:600;color:var(--muted);font-size:13px}
+.tablewrap{overflow-x:auto}
+nav{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);display:flex;justify-content:center;padding-bottom:env(safe-area-inset-bottom,0px);z-index:5}
+nav .in{display:flex;max-width:640px;width:100%}
+nav button{flex:1;font:inherit;font-size:14px;font-weight:600;background:none;border:0;color:var(--muted);padding:12px 4px 14px;cursor:pointer}
+nav button[aria-current="page"]{color:var(--ink);box-shadow:inset 0 3px 0 var(--accent)}
+nav .add{color:var(--accent)}
+.status{font-size:12px;color:var(--muted);margin-top:4px}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<main>
+  <!-- JOURNAL -->
+  <section id="v-journal">
+    <div class="hero">
+      <h1>Résultat total</h1>
+      <div id="total" class="total">0 €</div>
+      <div id="heroSub" class="sub">Aucun trade clôturé pour l’instant</div>
+      <svg id="curve" class="curve" viewBox="0 0 600 150" preserveAspectRatio="none" aria-label="Courbe des résultats cumulés"></svg>
+      <div id="status" class="status"></div>
+    </div>
+    <h2>Mes trades</h2>
+    <div id="list"></div>
+  </section>
+
+  <!-- AJOUT / MODIF -->
+  <section id="v-add" hidden>
+    <h2 id="formTitle">Nouveau trade</h2>
+    <form id="form" novalidate>
+      <div class="row">
+        <label>Date<input type="date" name="date" required></label>
+        <label>Marché<input type="text" name="market" placeholder="BTC/USD" autocomplete="off" required></label>
+      </div>
+      <div>
+        <div style="font-size:14px;font-weight:600;margin-bottom:6px">Sens</div>
+        <div class="seg side" id="side">
+          <button type="button" data-v="achat" aria-pressed="true">Achat</button>
+          <button type="button" data-v="vente" aria-pressed="false">Vente</button>
+        </div>
+      </div>
+      <label>Stratégie
+        <select name="strategy">
+          <option>Moyennes mobiles</option>
+          <option>RSI</option>
+          <option>Cassure</option>
+          <option>Autre</option>
+        </select>
+      </label>
+      <div class="row">
+        <label>Prix d’entrée<input type="text" inputmode="decimal" name="entry" required></label>
+        <label>Stop-loss<input type="text" inputmode="decimal" name="stop" required></label>
+      </div>
+      <div class="row">
+        <label>Objectif<input type="text" inputmode="decimal" name="target"></label>
+        <label>Prix de sortie<span class="hint">Vide si le trade est encore ouvert</span><input type="text" inputmode="decimal" name="exit"></label>
+      </div>
+      <label>Montant risqué (€)<span class="hint">Ce que tu perds si le stop est touché</span><input type="text" inputmode="decimal" name="risk" placeholder="10" required></label>
+      <div id="preview" class="preview"></div>
+      <div>
+        <div style="font-size:14px;font-weight:600;margin-bottom:6px">Plan respecté ?</div>
+        <div class="seg" id="plan">
+          <button type="button" data-v="oui" aria-pressed="true">Oui</button>
+          <button type="button" data-v="non" aria-pressed="false">Non</button>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:14px;font-weight:600;margin-bottom:6px">Émotion</div>
+        <div class="seg" id="emotion">
+          <button type="button" data-v="Calme" aria-pressed="true">Calme</button>
+          <button type="button" data-v="Confiant" aria-pressed="false">Confiant</button>
+          <button type="button" data-v="Impatient" aria-pressed="false">Impatient</button>
+          <button type="button" data-v="Stressé" aria-pressed="false">Stressé</button>
+          <button type="button" data-v="Frustré" aria-pressed="false">Frustré</button>
+        </div>
+      </div>
+      <label>Pourquoi je suis entré<textarea name="notes" placeholder="Ex. : la MM20 a croisé la MM50 à la hausse"></textarea></label>
+      <div class="actions">
+        <button type="button" id="del" class="btn ghost" hidden>Supprimer</button>
+        <button type="submit" class="btn" id="saveBtn" style="margin-left:auto">Enregistrer le trade</button>
+      </div>
+    </form>
+  </section>
+
+  <!-- STATS -->
+  <section id="v-stats" hidden>
+    <h2>Statistiques</h2>
+    <div id="statsBody"></div>
+    <h2>Sauvegarde</h2>
+    <p class="explain" style="margin-top:0">Tes trades sont enregistrés uniquement sur ce téléphone. Exporte une sauvegarde de temps en temps (dans Fichiers ou iCloud) pour ne rien perdre.</p>
+    <div class="actions" style="margin-top:12px;justify-content:flex-start;flex-wrap:wrap">
+      <button type="button" class="btn" id="exportBtn">Exporter une sauvegarde</button>
+      <label class="btn ghost" style="color:var(--ink);display:inline-block;cursor:pointer">Importer<input type="file" id="importFile" accept="application/json,.json" hidden></label>
+    </div>
+    <p id="backupMsg" class="explain"></p>
+  </section>
+</main>
+
+<nav aria-label="Navigation">
+  <div class="in">
+    <button data-view="journal" aria-current="page">Journal</button>
+    <button data-view="add" class="add">+ Ajouter</button>
+    <button data-view="stats">Stats</button>
+  </div>
+</nav>
+
+<script>
+(function(){
+  const LS_KEY = "journal-trading-v1";
+  let trades = [];
+  let editingId = null;
+
+  const $ = s => document.querySelector(s);
+  const num = v => { if (v === undefined || v === null || String(v).trim() === "") return null; const n = parseFloat(String(v).replace(/\s/g,"").replace(",", ".")); return isFinite(n) ? n : null; };
+  const eur = n => (n > 0 ? "+" : n < 0 ? "−" : "") + Math.abs(n).toLocaleString("fr-FR",{maximumFractionDigits:2}) + " €";
+  const rfmt = n => (n > 0 ? "+" : n < 0 ? "−" : "") + Math.abs(n).toLocaleString("fr-FR",{maximumFractionDigits:2}) + " R";
+  const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+  // R = gain en multiples du risque
+  function calc(t){
+    const e = num(t.entry), s = num(t.stop), x = num(t.exit), risk = num(t.risk) || 0;
+    if (e === null || s === null || e === s) return {r:null, pnl:null, open: x === null};
+    const dir = t.side === "vente" ? -1 : 1;
+    const riskPerUnit = Math.abs(e - s);
+    if (x === null) return {r:null, pnl:null, open:true};
+    const r = dir * (x - e) / riskPerUnit;
+    return {r, pnl: r * risk, open:false};
+  }
+
+  // ---------- stockage ----------
+  function saveLocal(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(trades)); }catch(e){} }
+  function loadLocal(){ try{ const v = localStorage.getItem(LS_KEY); return v ? JSON.parse(v) : []; }catch(e){ return []; } }
+
+  function setStatus(t){ $("#status").textContent = t; }
+  async function persist(t){ saveLocal(); }
+  async function removeRemote(id){ saveLocal(); }
+
+  // ---------- navigation ----------
+  function show(view){
+    ["journal","add","stats"].forEach(v => $("#v-"+v).hidden = v !== view);
+    document.querySelectorAll("nav button").forEach(b => { if (b.dataset.view === view) b.setAttribute("aria-current","page"); else b.removeAttribute("aria-current"); });
+    if (view === "add" && editingId === null) resetForm();
+    if (view === "stats") renderStats();
+    window.scrollTo(0,0);
+  }
+  document.querySelectorAll("nav button").forEach(b => b.addEventListener("click", () => { if (b.dataset.view === "add") editingId = null; show(b.dataset.view); }));
+
+  // ---------- boutons segmentés ----------
+  function segSetup(id){
+    const el = $("#"+id);
+    el.addEventListener("click", e => {
+      const b = e.target.closest("button"); if (!b) return;
+      el.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b ? "true" : "false"));
+      updatePreview();
+    });
+  }
+  const segGet = id => $("#"+id+' button[aria-pressed="true"]').dataset.v;
+  const segSet = (id,v) => $("#"+id).querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x.dataset.v === v ? "true" : "false"));
+  ["side","plan","emotion"].forEach(segSetup);
+
+  // ---------- formulaire ----------
+  const form = $("#form");
+  function formData(){
+    const f = new FormData(form);
+    return {
+      date: f.get("date"), market: (f.get("market")||"").trim(), side: segGet("side"),
+      strategy: f.get("strategy"), entry: f.get("entry"), stop: f.get("stop"), target: f.get("target"),
+      exit: f.get("exit"), risk: f.get("risk"), plan: segGet("plan"), emotion: segGet("emotion"), notes: f.get("notes")
+    };
+  }
+  function resetForm(){
+    form.reset();
+    form.date.value = new Date().toISOString().slice(0,10);
+    segSet("side","achat"); segSet("plan","oui"); segSet("emotion","Calme");
+    $("#formTitle").textContent = "Nouveau trade";
+    $("#saveBtn").textContent = "Enregistrer le trade";
+    $("#del").hidden = true;
+    updatePreview();
+  }
+  function fillForm(t){
+    ["date","market","strategy","entry","stop","target","exit","risk","notes"].forEach(k => form[k].value = t[k] ?? "");
+    segSet("side",t.side); segSet("plan",t.plan); segSet("emotion",t.emotion);
+    $("#formTitle").textContent = "Modifier le trade";
+    $("#saveBtn").textContent = "Enregistrer les modifications";
+    $("#del").hidden = false;
+    updatePreview();
+  }
+  function updatePreview(){
+    const t = formData();
+    const e = num(t.entry), s = num(t.stop), tg = num(t.target);
+    const p = $("#preview");
+    if (e === null || s === null || e === s) { p.innerHTML = "Entre le prix d’entrée et le stop-loss pour voir ton ratio risque/rendement."; return; }
+    const dir = t.side === "vente" ? -1 : 1;
+    if (dir * (e - s) <= 0) { p.innerHTML = t.side === "achat" ? "Pour un achat, le stop-loss doit être <b>en dessous</b> du prix d’entrée." : "Pour une vente, le stop-loss doit être <b>au-dessus</b> du prix d’entrée."; return; }
+    let txt = "";
+    if (tg !== null) {
+      const rr = dir * (tg - e) / Math.abs(e - s);
+      txt += "Ratio risque/rendement : <b>1 pour " + rr.toLocaleString("fr-FR",{maximumFractionDigits:2}) + "</b>. ";
+      if (rr < 1) txt += "Tu risques plus que tu ne vises. ";
+      else if (rr >= 2) txt += "Bon ratio. ";
+    }
+    const c = calc(t);
+    if (!c.open && c.r !== null) txt += "Résultat : <b>" + rfmt(c.r) + "</b>" + (num(t.risk) ? " soit <b>" + eur(c.pnl) + "</b>" : "") + ".";
+    p.innerHTML = txt || "Ajoute un objectif pour voir ton ratio risque/rendement.";
+  }
+  form.addEventListener("input", updatePreview);
+
+  form.addEventListener("submit", async e => {
+    e.preventDefault();
+    const t = formData();
+    if (!t.market || num(t.entry) === null || num(t.stop) === null || num(t.risk) === null) {
+      $("#preview").innerHTML = "Il manque le <b>marché</b>, le <b>prix d’entrée</b>, le <b>stop-loss</b> ou le <b>montant risqué</b>.";
+      return;
+    }
+    if (editingId) {
+      t.id = editingId; t.created = (trades.find(x => x.id === editingId)||{}).created || Date.now();
+      trades = trades.map(x => x.id === editingId ? t : x);
+    } else {
+      t.id = "t" + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+      t.created = Date.now();
+      trades.push(t);
+    }
+    editingId = null;
+    render(); show("journal");
+    await persist(t);
+  });
+
+  $("#del").addEventListener("click", async () => {
+    if (!editingId || !confirm("Supprimer ce trade ?")) return;
+    const id = editingId;
+    trades = trades.filter(x => x.id !== id);
+    editingId = null;
+    render(); show("journal");
+    await removeRemote(id);
+  });
+
+  // ---------- rendu ----------
+  const sorted = () => [...trades].sort((a,b) => (b.date||"").localeCompare(a.date||"") || b.created - a.created);
+
+  function render(){
+    const list = $("#list");
+    if (!trades.length) {
+      list.innerHTML = '<div class="empty">Ton journal est vide.<br>Ajoute ton premier trade, même un trade en démo.<br><button class="btn" id="firstAdd">Ajouter un trade</button></div>';
+      $("#firstAdd").onclick = () => { editingId = null; show("add"); };
+    } else {
+      list.innerHTML = sorted().map(t => {
+        const c = calc(t);
+        const res = c.open ? '<div class="t-res open">En cours</div>' : '<div class="t-res ' + (c.pnl >= 0 ? "pos" : "neg") + '">' + eur(c.pnl) + '</div>';
+        const d = t.date ? new Date(t.date + "T12:00").toLocaleDateString("fr-FR",{day:"numeric",month:"short"}) : "";
+        return '<button class="trade" data-id="' + esc(t.id) + '">' +
+          '<div class="t-main">' + esc(t.market) + '<span class="t-side">' + (t.side === "vente" ? "Vente" : "Achat") + '</span></div>' + res +
+          '<div class="t-meta">' + esc(d) + ', ' + esc(t.strategy) + (t.plan === "non" ? ", plan non respecté" : "") + '</div>' +
+          '<div class="t-r">' + (c.open ? "" : rfmt(c.r)) + '</div></button>';
+      }).join("");
+      list.querySelectorAll(".trade").forEach(b => b.onclick = () => { const t = trades.find(x => x.id === b.dataset.id); editingId = t.id; fillForm(t); show("add"); });
+    }
+    renderHero();
+  }
+
+  function closedTrades(){ return trades.map(t => ({t, c:calc(t)})).filter(x => !x.c.open && x.c.r !== null); }
+
+  function renderHero(){
+    const closed = closedTrades().sort((a,b) => (a.t.date||"").localeCompare(b.t.date||"") || a.t.created - b.t.created);
+    const total = closed.reduce((s,x) => s + x.c.pnl, 0);
+    const el = $("#total");
+    el.textContent = closed.length ? eur(total) : "0 €";
+    el.className = "total" + (closed.length ? (total >= 0 ? " pos" : " neg") : "");
+    const open = trades.length - closed.length;
+    $("#heroSub").textContent = closed.length
+      ? closed.length + " trade" + (closed.length > 1 ? "s" : "") + " clôturé" + (closed.length > 1 ? "s" : "") + (open ? ", " + open + " en cours" : "")
+      : (open ? open + " trade" + (open > 1 ? "s" : "") + " en cours" : "Aucun trade clôturé pour l’instant");
+    // courbe
+    const svg = $("#curve");
+    const pts = [0]; let acc = 0; closed.forEach(x => { acc += x.c.pnl; pts.push(acc); });
+    if (pts.length < 2) { svg.innerHTML = ""; svg.style.display = "none"; return; }
+    svg.style.display = "block";
+    const W = 600, H = 150, pad = 8;
+    const min = Math.min(...pts), max = Math.max(...pts), span = (max - min) || 1;
+    const X = i => i / (pts.length - 1) * W;
+    const Y = v => pad + (max - v) / span * (H - 2*pad);
+    const d = pts.map((v,i) => (i ? "L" : "M") + X(i).toFixed(1) + " " + Y(v).toFixed(1)).join(" ");
+    const color = acc >= 0 ? "var(--gain)" : "var(--loss)";
+    svg.innerHTML =
+      '<line x1="0" x2="600" y1="' + Y(0).toFixed(1) + '" y2="' + Y(0).toFixed(1) + '" stroke="var(--line)" stroke-dasharray="4 4" vector-effect="non-scaling-stroke"/>' +
+      '<path d="' + d + ' L600 ' + Y(0).toFixed(1) + ' L0 ' + Y(0).toFixed(1) + 'Z" fill="' + color + '" opacity="0.12"/>' +
+      '<path d="' + d + '" fill="none" stroke="' + color + '" stroke-width="2.5" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>';
+  }
+
+  function summarize(arr){
+    const n = arr.length;
+    const wins = arr.filter(x => x.c.r > 0), losses = arr.filter(x => x.c.r <= 0);
+    const avg = a => a.length ? a.reduce((s,x) => s + x.c.r, 0) / a.length : 0;
+    return { n, winRate: n ? wins.length / n : 0, avgWin: avg(wins), avgLoss: avg(losses), exp: avg(arr), pnl: arr.reduce((s,x) => s + x.c.pnl, 0) };
+  }
+
+  function renderStats(){
+    const closed = closedTrades();
+    const body = $("#statsBody");
+    if (!closed.length) { body.innerHTML = '<div class="empty">Les statistiques apparaissent dès que tu as clôturé un trade (avec un prix de sortie).</div>'; return; }
+    const s = summarize(closed);
+    const pct = v => Math.round(v * 100) + " %";
+    let html = '<div class="stats">' +
+      '<div class="stat"><div class="v">' + s.n + '</div><div class="k">Trades clôturés</div></div>' +
+      '<div class="stat"><div class="v">' + pct(s.winRate) + '</div><div class="k">Taux de réussite</div></div>' +
+      '<div class="stat"><div class="v" style="color:var(--gain)">' + rfmt(s.avgWin) + '</div><div class="k">Gain moyen</div></div>' +
+      '<div class="stat"><div class="v" style="color:var(--loss)">' + rfmt(s.avgLoss) + '</div><div class="k">Perte moyenne</div></div>' +
+      '</div>' +
+      '<div class="stats" style="margin-top:12px;grid-template-columns:1fr"><div class="stat"><div class="v" style="color:' + (s.exp >= 0 ? "var(--gain)" : "var(--loss)") + '">' + rfmt(s.exp) + ' par trade</div><div class="k">Espérance : ce que tu gagnes ou perds en moyenne à chaque trade</div></div></div>' +
+      '<p class="explain">« R » = ton risque. +2 R veut dire que tu as gagné deux fois ce que tu avais risqué. Si l’espérance est positive sur 30 trades ou plus, ta stratégie a peut-être un avantage.' + (s.n < 30 ? " Avec " + s.n + " trade" + (s.n > 1 ? "s" : "") + ", c’est encore trop tôt pour conclure." : "") + '</p>';
+
+    const group = key => {
+      const m = {};
+      closed.forEach(x => { const k = x.t[key] || "—"; (m[k] = m[k] || []).push(x); });
+      return Object.entries(m).map(([k,a]) => [k, summarize(a)]).sort((a,b) => b[1].n - a[1].n);
+    };
+    const table = (title, rows, label) => '<h2>' + title + '</h2><div class="tablewrap"><table><thead><tr><th>' + label + '</th><th>Trades</th><th>Réussite</th><th>Espérance</th><th>Total</th></tr></thead><tbody>' +
+      rows.map(([k,v]) => '<tr><td>' + esc(k) + '</td><td>' + v.n + '</td><td>' + pct(v.winRate) + '</td><td style="color:' + (v.exp >= 0 ? "var(--gain)" : "var(--loss)") + '">' + rfmt(v.exp) + '</td><td>' + eur(v.pnl) + '</td></tr>').join("") +
+      '</tbody></table></div>';
+
+    html += table("Par stratégie", group("strategy"), "Stratégie");
+    const plan = group("plan").map(([k,v]) => [k === "oui" ? "Plan respecté" : "Plan non respecté", v]);
+    html += table("Discipline", plan, "Plan");
+    html += table("Par émotion", group("emotion"), "Émotion");
+    body.innerHTML = html;
+  }
+
+  // ---------- démarrage ----------
+  trades = loadLocal();
+  resetForm();
+  render();
+  setStatus("Enregistré sur ce téléphone");
+  if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(()=>{});
+  if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(()=>{});
+
+  // ---------- sauvegarde ----------
+  $("#exportBtn").addEventListener("click", async () => {
+    const data = JSON.stringify({app:"journal-trading", version:1, exported:new Date().toISOString(), trades}, null, 2);
+    const name = "journal-trading-" + new Date().toISOString().slice(0,10) + ".json";
+    const file = new File([data], name, {type:"application/json"});
+    try {
+      if (navigator.canShare && navigator.canShare({files:[file]})) { await navigator.share({files:[file], title:"Sauvegarde journal"}); return; }
+    } catch(e) { if (e && e.name === "AbortError") return; }
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(file); a.download = name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  });
+  $("#importFile").addEventListener("change", async e => {
+    const f = e.target.files[0]; if (!f) return;
+    try {
+      const j = JSON.parse(await f.text());
+      const arr = Array.isArray(j) ? j : j.trades;
+      if (!Array.isArray(arr)) throw new Error();
+      const ids = new Set(trades.map(t => t.id));
+      let added = 0;
+      arr.forEach(t => { if (t && t.id && !ids.has(t.id)) { trades.push(t); added++; } });
+      saveLocal(); render(); renderStats();
+      $("#backupMsg").textContent = added + " trade" + (added > 1 ? "s" : "") + " importé" + (added > 1 ? "s" : "") + ".";
+    } catch(err) {
+      $("#backupMsg").textContent = "Ce fichier n’est pas une sauvegarde du journal.";
+    }
+    e.target.value = "";
+  });
+})();
+</script>
+</body>
+</html>
