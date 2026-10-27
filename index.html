@@ -64,7 +64,7 @@ label{display:grid;gap:6px;font-size:14px;font-weight:600}
 input,select,textarea{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:11px 12px;width:100%}
 input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:0;border-color:transparent}
 textarea{min-height:80px;resize:vertical}
-.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:end}
 .seg{display:flex;gap:8px;flex-wrap:wrap}
 .seg button{font:inherit;font-size:14px;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:99px;padding:8px 14px;cursor:pointer}
 .seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
@@ -94,6 +94,33 @@ nav button[aria-current="page"]{color:var(--ink);box-shadow:inset 0 3px 0 var(--
 nav .add{color:var(--accent)}
 .status{font-size:12px;color:var(--muted);margin-top:4px}
 [hidden]{display:none!important}
+.progress{margin-top:14px}
+.progress .bar{height:8px;background:var(--line);border-radius:99px;overflow:hidden}
+.progress .fill{height:100%;background:var(--accent);border-radius:99px}
+.progress .lbl{display:flex;justify-content:space-between;font-size:13px;color:var(--muted);margin-bottom:6px}
+.filters{display:grid;gap:10px;margin-bottom:6px}
+.filters .row select{padding:9px 10px;font-size:14px}
+.count{font-size:13px;color:var(--muted);margin:6px 2px}
+.t-photo{font-size:12px;margin-left:6px}
+.checklist{display:grid;gap:8px}
+.check{display:flex;gap:10px;align-items:flex-start;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:11px 12px;font-weight:400;font-size:15px;cursor:pointer}
+.check input{width:22px;height:22px;margin:0;flex:none;accent-color:var(--gain)}
+.warn{color:var(--loss)} .ok{color:var(--gain)}
+.photo-box{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.thumb{width:96px;height:72px;object-fit:cover;border-radius:10px;border:1px solid var(--line);cursor:zoom-in}
+.filebtn{display:inline-block;font-size:14px;font-weight:600;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:10px;padding:10px 14px;cursor:pointer}
+.linkbtn{font:inherit;font-size:14px;background:none;border:0;color:var(--loss);cursor:pointer;padding:6px}
+.viewer{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:20;display:flex;align-items:center;justify-content:center;padding:env(safe-area-inset-top,0px) 10px env(safe-area-inset-bottom,0px)}
+.viewer img{max-width:100%;max-height:100%;object-fit:contain}
+.strat{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px;display:grid;gap:10px}
+.strat .name{font-weight:800;font-size:17px}
+.rule{display:flex;gap:8px;align-items:flex-start;font-size:15px;border-bottom:1px solid var(--line);padding:6px 0}
+.rule span{flex:1}
+.rule button{background:none;border:0;color:var(--muted);font-size:18px;cursor:pointer;padding:0 4px;line-height:1}
+.inline{display:flex;gap:8px}
+.inline input{flex:1}
+.inline .btn{padding:10px 14px;white-space:nowrap}
+.small{font-size:13px;color:var(--muted)}
 </style>
 </head>
 <body>
@@ -105,9 +132,26 @@ nav .add{color:var(--accent)}
       <div id="total" class="total">0 €</div>
       <div id="heroSub" class="sub">Aucun trade clôturé pour l’instant</div>
       <svg id="curve" class="curve" viewBox="0 0 600 150" preserveAspectRatio="none" aria-label="Courbe des résultats cumulés"></svg>
-      <div id="status" class="status"></div>
+      <div class="progress">
+        <div class="lbl"><span>Objectif : 30 trades clôturés</span><span id="progTxt">0/30</span></div>
+        <div class="bar"><div class="fill" id="progFill" style="width:0%"></div></div>
+        <div id="progMsg" class="small" style="margin-top:6px"></div>
+      </div>
     </div>
     <h2>Mes trades</h2>
+    <div class="filters">
+      <div class="seg" id="fStatus">
+        <button type="button" data-v="all" aria-pressed="true">Tous</button>
+        <button type="button" data-v="open" aria-pressed="false">En cours</button>
+        <button type="button" data-v="win" aria-pressed="false">Gagnants</button>
+        <button type="button" data-v="loss" aria-pressed="false">Perdants</button>
+      </div>
+      <div class="row">
+        <select id="fStrategy" aria-label="Filtrer par stratégie"></select>
+        <select id="fMarket" aria-label="Filtrer par marché"></select>
+      </div>
+    </div>
+    <div id="count" class="count"></div>
     <div id="list"></div>
   </section>
 
@@ -117,8 +161,9 @@ nav .add{color:var(--accent)}
     <form id="form" novalidate>
       <div class="row">
         <label>Date<input type="date" name="date" required></label>
-        <label>Marché<input type="text" name="market" placeholder="BTC/USD" autocomplete="off" required></label>
+        <label>Marché<input type="text" name="market" placeholder="BTC/USD" autocomplete="off" list="markets" required></label>
       </div>
+      <datalist id="markets"></datalist>
       <div>
         <div style="font-size:14px;font-weight:600;margin-bottom:6px">Sens</div>
         <div class="seg side" id="side">
@@ -126,14 +171,11 @@ nav .add{color:var(--accent)}
           <button type="button" data-v="vente" aria-pressed="false">Vente</button>
         </div>
       </div>
-      <label>Stratégie
-        <select name="strategy">
-          <option>Moyennes mobiles</option>
-          <option>RSI</option>
-          <option>Cassure</option>
-          <option>Autre</option>
-        </select>
-      </label>
+      <label>Stratégie<select name="strategy" id="strategySel"></select></label>
+      <div id="checkWrap">
+        <div style="font-size:14px;font-weight:600;margin-bottom:6px">Checklist avant d’entrer</div>
+        <div id="checklist" class="checklist"></div>
+      </div>
       <div class="row">
         <label>Prix d’entrée<input type="text" inputmode="decimal" name="entry" required></label>
         <label>Stop-loss<input type="text" inputmode="decimal" name="stop" required></label>
@@ -161,6 +203,14 @@ nav .add{color:var(--accent)}
           <button type="button" data-v="Frustré" aria-pressed="false">Frustré</button>
         </div>
       </div>
+      <div>
+        <div style="font-size:14px;font-weight:600;margin-bottom:6px">Capture du graphique</div>
+        <div class="photo-box">
+          <img id="thumb" class="thumb" alt="Capture du graphique" hidden>
+          <label class="filebtn" id="photoLbl">Ajouter une capture<input type="file" id="photoInput" accept="image/*" hidden></label>
+          <button type="button" class="linkbtn" id="photoDel" hidden>Retirer</button>
+        </div>
+      </div>
       <label>Pourquoi je suis entré<textarea name="notes" placeholder="Ex. : la MM20 a croisé la MM50 à la hausse"></textarea></label>
       <div class="actions">
         <button type="button" id="del" class="btn ghost" hidden>Supprimer</button>
@@ -173,175 +223,346 @@ nav .add{color:var(--accent)}
   <section id="v-stats" hidden>
     <h2>Statistiques</h2>
     <div id="statsBody"></div>
+  </section>
+
+  <!-- REGLAGES -->
+  <section id="v-settings" hidden>
+    <h2>Capital</h2>
+    <label>Capital de ton compte (€)<span class="hint">Sert à calculer le % de ton capital risqué sur chaque trade</span>
+      <input type="text" inputmode="decimal" id="capital" placeholder="1000">
+    </label>
+    <h2>Mes stratégies</h2>
+    <p class="small" style="margin-top:0">Les règles de chaque stratégie apparaissent en checklist quand tu ajoutes un trade.</p>
+    <div id="stratList"></div>
+    <div class="inline">
+      <input type="text" id="newStrat" placeholder="Nom d’une nouvelle stratégie">
+      <button type="button" class="btn" id="addStrat">Ajouter</button>
+    </div>
     <h2>Sauvegarde</h2>
-    <p class="explain" style="margin-top:0">Tes trades sont enregistrés uniquement sur ce téléphone. Exporte une sauvegarde de temps en temps (dans Fichiers ou iCloud) pour ne rien perdre.</p>
+    <p class="small" style="margin-top:0">Tes trades et tes captures sont enregistrés uniquement sur ce téléphone. Exporte une sauvegarde de temps en temps (dans Fichiers ou iCloud) pour ne rien perdre.</p>
     <div class="actions" style="margin-top:12px;justify-content:flex-start;flex-wrap:wrap">
       <button type="button" class="btn" id="exportBtn">Exporter une sauvegarde</button>
       <label class="btn ghost" style="color:var(--ink);display:inline-block;cursor:pointer">Importer<input type="file" id="importFile" accept="application/json,.json" hidden></label>
     </div>
-    <p id="backupMsg" class="explain"></p>
+    <p id="backupMsg" class="small"></p>
   </section>
 </main>
+
+<div class="viewer" id="viewer" hidden><img id="viewerImg" alt="Capture du graphique"></div>
 
 <nav aria-label="Navigation">
   <div class="in">
     <button data-view="journal" aria-current="page">Journal</button>
     <button data-view="add" class="add">+ Ajouter</button>
     <button data-view="stats">Stats</button>
+    <button data-view="settings">Réglages</button>
   </div>
 </nav>
-
 <script>
 (function(){
   const LS_KEY = "journal-trading-v1";
+  const SET_KEY = "journal-trading-settings";
+  const GOAL = 30;
+  const DEFAULT_STRATS = [
+    {id:"s1", name:"Moyennes mobiles", rules:["La MM20 croise la MM50 dans le sens du trade","Le stop-loss est placé avant d’entrer","Le ratio risque/rendement est d’au moins 1 pour 2"]},
+    {id:"s2", name:"RSI", rules:["Le RSI est sous 30 (achat) ou au-dessus de 70 (vente)","Le marché est en range, pas en forte tendance","Le stop-loss est placé avant d’entrer"]},
+    {id:"s3", name:"Cassure", rules:["Le prix casse le plus haut ou le plus bas des 20 dernières bougies","La bougie de cassure clôture au-delà du niveau","Le stop-loss est placé avant d’entrer"]},
+    {id:"s4", name:"Autre", rules:[]}
+  ];
+
   let trades = [];
+  let settings = {capital:"", strategies: DEFAULT_STRATS};
   let editingId = null;
+  let pendingPhoto;      // undefined = inchangée, string = nouvelle photo
+  let photoRemoved = false;
+  let filter = {status:"all", strategy:"", market:""};
 
   const $ = s => document.querySelector(s);
   const num = v => { if (v === undefined || v === null || String(v).trim() === "") return null; const n = parseFloat(String(v).replace(/\s/g,"").replace(",", ".")); return isFinite(n) ? n : null; };
-  const eur = n => (n > 0 ? "+" : n < 0 ? "−" : "") + Math.abs(n).toLocaleString("fr-FR",{maximumFractionDigits:2}) + " €";
-  const rfmt = n => (n > 0 ? "+" : n < 0 ? "−" : "") + Math.abs(n).toLocaleString("fr-FR",{maximumFractionDigits:2}) + " R";
+  const fr = (n, d=2) => n.toLocaleString("fr-FR",{maximumFractionDigits:d});
+  const eur = n => (n > 0 ? "+" : n < 0 ? "−" : "") + fr(Math.abs(n)) + " €";
+  const rfmt = n => (n > 0 ? "+" : n < 0 ? "−" : "") + fr(Math.abs(n)) + " R";
   const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const uid = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+  function qtyFmt(q){
+    if (q >= 100) return fr(q, 0);
+    if (q >= 1) return fr(q, 2);
+    const digits = Math.min(8, Math.max(2, -Math.floor(Math.log10(q)) + 2));
+    return fr(q, digits);
+  }
 
-  // R = gain en multiples du risque
   function calc(t){
     const e = num(t.entry), s = num(t.stop), x = num(t.exit), risk = num(t.risk) || 0;
     if (e === null || s === null || e === s) return {r:null, pnl:null, open: x === null};
-    const dir = t.side === "vente" ? -1 : 1;
-    const riskPerUnit = Math.abs(e - s);
     if (x === null) return {r:null, pnl:null, open:true};
-    const r = dir * (x - e) / riskPerUnit;
+    const dir = t.side === "vente" ? -1 : 1;
+    const r = dir * (x - e) / Math.abs(e - s);
     return {r, pnl: r * risk, open:false};
   }
 
   // ---------- stockage ----------
   function saveLocal(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(trades)); }catch(e){} }
-  function loadLocal(){ try{ const v = localStorage.getItem(LS_KEY); return v ? JSON.parse(v) : []; }catch(e){ return []; } }
+  function saveSettings(){ try{ localStorage.setItem(SET_KEY, JSON.stringify(settings)); }catch(e){} }
+  function loadAll(){
+    try{ const v = localStorage.getItem(LS_KEY); trades = v ? JSON.parse(v) : []; }catch(e){ trades = []; }
+    try{ const v = localStorage.getItem(SET_KEY); if (v) settings = Object.assign({capital:"", strategies:DEFAULT_STRATS}, JSON.parse(v)); }catch(e){}
+    if (!Array.isArray(settings.strategies) || !settings.strategies.length) settings.strategies = DEFAULT_STRATS;
+  }
 
-  function setStatus(t){ $("#status").textContent = t; }
-  async function persist(t){ saveLocal(); }
-  async function removeRemote(id){ saveLocal(); }
+  // photos dans IndexedDB (trop lourdes pour localStorage)
+  let dbp = null;
+  function idb(){
+    if (dbp) return dbp;
+    dbp = new Promise((res, rej) => {
+      if (!window.indexedDB) return rej(new Error("no idb"));
+      const r = indexedDB.open("journal-trading", 1);
+      r.onupgradeneeded = () => r.result.createObjectStore("photos");
+      r.onsuccess = () => res(r.result);
+      r.onerror = () => rej(r.error);
+    });
+    return dbp;
+  }
+  async function photoOp(mode, fn){
+    const db = await idb();
+    return new Promise((res, rej) => {
+      const tx = db.transaction("photos", mode);
+      const req = fn(tx.objectStore("photos"));
+      tx.oncomplete = () => res(req ? req.result : undefined);
+      tx.onerror = () => rej(tx.error);
+    });
+  }
+  const photoGet = id => photoOp("readonly", s => s.get(id)).catch(() => null);
+  const photoPut = (id, data) => photoOp("readwrite", s => s.put(data, id)).catch(() => {});
+  const photoDel = id => photoOp("readwrite", s => s.delete(id)).catch(() => {});
+
+  async function compress(file){
+    const url = URL.createObjectURL(file);
+    try{
+      const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = url; });
+      const max = 1400, k = Math.min(1, max / Math.max(img.width, img.height));
+      const c = document.createElement("canvas");
+      c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      return c.toDataURL("image/jpeg", 0.8);
+    } finally { URL.revokeObjectURL(url); }
+  }
 
   // ---------- navigation ----------
+  const VIEWS = ["journal","add","stats","settings"];
   function show(view){
-    ["journal","add","stats"].forEach(v => $("#v-"+v).hidden = v !== view);
+    VIEWS.forEach(v => $("#v-"+v).hidden = v !== view);
     document.querySelectorAll("nav button").forEach(b => { if (b.dataset.view === view) b.setAttribute("aria-current","page"); else b.removeAttribute("aria-current"); });
     if (view === "add" && editingId === null) resetForm();
     if (view === "stats") renderStats();
+    if (view === "settings") renderSettings();
     window.scrollTo(0,0);
   }
   document.querySelectorAll("nav button").forEach(b => b.addEventListener("click", () => { if (b.dataset.view === "add") editingId = null; show(b.dataset.view); }));
 
   // ---------- boutons segmentés ----------
-  function segSetup(id){
+  function segSetup(id, cb){
     const el = $("#"+id);
     el.addEventListener("click", e => {
       const b = e.target.closest("button"); if (!b) return;
       el.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b ? "true" : "false"));
-      updatePreview();
+      cb && cb(b.dataset.v);
     });
   }
   const segGet = id => $("#"+id+' button[aria-pressed="true"]').dataset.v;
   const segSet = (id,v) => $("#"+id).querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x.dataset.v === v ? "true" : "false"));
-  ["side","plan","emotion"].forEach(segSetup);
+  segSetup("side", updatePreview); segSetup("plan"); segSetup("emotion");
+  segSetup("fStatus", v => { filter.status = v; renderList(); });
 
   // ---------- formulaire ----------
   const form = $("#form");
+  const stratByName = n => settings.strategies.find(s => s.name === n);
+
+  function fillStrategySelect(current){
+    const names = settings.strategies.map(s => s.name);
+    if (current && !names.includes(current)) names.push(current);
+    $("#strategySel").innerHTML = names.map(n => '<option>' + esc(n) + '</option>').join("");
+    if (current) $("#strategySel").value = current;
+  }
+  function renderChecklist(checked){
+    const s = stratByName($("#strategySel").value);
+    const rules = s ? s.rules : [];
+    $("#checkWrap").hidden = !rules.length;
+    $("#checklist").innerHTML = rules.map((r,i) =>
+      '<label class="check"><input type="checkbox" data-rule="' + esc(r) + '"' + (checked && checked.includes(r) ? " checked" : "") + '><span>' + esc(r) + '</span></label>').join("");
+  }
+  $("#strategySel").addEventListener("change", () => { renderChecklist([]); updatePreview(); });
+  $("#checklist").addEventListener("change", updatePreview);
+
   function formData(){
     const f = new FormData(form);
+    const boxes = [...document.querySelectorAll("#checklist input")];
     return {
       date: f.get("date"), market: (f.get("market")||"").trim(), side: segGet("side"),
       strategy: f.get("strategy"), entry: f.get("entry"), stop: f.get("stop"), target: f.get("target"),
-      exit: f.get("exit"), risk: f.get("risk"), plan: segGet("plan"), emotion: segGet("emotion"), notes: f.get("notes")
+      exit: f.get("exit"), risk: f.get("risk"), plan: segGet("plan"), emotion: segGet("emotion"), notes: f.get("notes"),
+      checks: boxes.filter(b => b.checked).map(b => b.dataset.rule), rulesTotal: boxes.length
     };
+  }
+  function setThumb(src){
+    const t = $("#thumb");
+    if (src) { t.src = src; t.hidden = false; $("#photoDel").hidden = false; $("#photoLbl").firstChild.textContent = "Changer la capture"; }
+    else { t.removeAttribute("src"); t.hidden = true; $("#photoDel").hidden = true; $("#photoLbl").firstChild.textContent = "Ajouter une capture"; }
+  }
+  function fillMarkets(){
+    const ms = [...new Set(trades.map(t => t.market).filter(Boolean))].sort();
+    $("#markets").innerHTML = ms.map(m => '<option value="' + esc(m) + '">').join("");
   }
   function resetForm(){
     form.reset();
     form.date.value = new Date().toISOString().slice(0,10);
     segSet("side","achat"); segSet("plan","oui"); segSet("emotion","Calme");
+    fillStrategySelect(settings.strategies[0].name);
+    renderChecklist([]);
+    pendingPhoto = undefined; photoRemoved = false; setThumb(null);
+    fillMarkets();
     $("#formTitle").textContent = "Nouveau trade";
     $("#saveBtn").textContent = "Enregistrer le trade";
     $("#del").hidden = true;
     updatePreview();
   }
-  function fillForm(t){
-    ["date","market","strategy","entry","stop","target","exit","risk","notes"].forEach(k => form[k].value = t[k] ?? "");
+  async function fillForm(t){
+    ["date","market","entry","stop","target","exit","risk","notes"].forEach(k => form[k].value = t[k] ?? "");
     segSet("side",t.side); segSet("plan",t.plan); segSet("emotion",t.emotion);
+    fillStrategySelect(t.strategy);
+    renderChecklist(t.checks || []);
+    pendingPhoto = undefined; photoRemoved = false; setThumb(null);
+    fillMarkets();
     $("#formTitle").textContent = "Modifier le trade";
     $("#saveBtn").textContent = "Enregistrer les modifications";
     $("#del").hidden = false;
     updatePreview();
+    if (t.hasPhoto) { const p = await photoGet(t.id); if (p && editingId === t.id) setThumb(p); }
   }
+
   function updatePreview(){
     const t = formData();
-    const e = num(t.entry), s = num(t.stop), tg = num(t.target);
-    const p = $("#preview");
-    if (e === null || s === null || e === s) { p.innerHTML = "Entre le prix d’entrée et le stop-loss pour voir ton ratio risque/rendement."; return; }
-    const dir = t.side === "vente" ? -1 : 1;
-    if (dir * (e - s) <= 0) { p.innerHTML = t.side === "achat" ? "Pour un achat, le stop-loss doit être <b>en dessous</b> du prix d’entrée." : "Pour une vente, le stop-loss doit être <b>au-dessus</b> du prix d’entrée."; return; }
-    let txt = "";
-    if (tg !== null) {
-      const rr = dir * (tg - e) / Math.abs(e - s);
-      txt += "Ratio risque/rendement : <b>1 pour " + rr.toLocaleString("fr-FR",{maximumFractionDigits:2}) + "</b>. ";
-      if (rr < 1) txt += "Tu risques plus que tu ne vises. ";
-      else if (rr >= 2) txt += "Bon ratio. ";
+    const e = num(t.entry), s = num(t.stop), tg = num(t.target), risk = num(t.risk);
+    const lines = [];
+    if (t.rulesTotal) {
+      const n = t.checks.length;
+      lines.push(n === t.rulesTotal
+        ? '<span class="ok">Checklist complète (' + n + '/' + t.rulesTotal + ').</span>'
+        : '<span class="warn">Checklist : ' + n + '/' + t.rulesTotal + ' règles validées. Ce trade sort de ton plan.</span>');
     }
-    const c = calc(t);
-    if (!c.open && c.r !== null) txt += "Résultat : <b>" + rfmt(c.r) + "</b>" + (num(t.risk) ? " soit <b>" + eur(c.pnl) + "</b>" : "") + ".";
-    p.innerHTML = txt || "Ajoute un objectif pour voir ton ratio risque/rendement.";
+    if (e === null || s === null || e === s) {
+      lines.push("Entre le prix d’entrée et le stop-loss pour voir ton ratio et ta taille de position.");
+    } else {
+      const dir = t.side === "vente" ? -1 : 1;
+      if (dir * (e - s) <= 0) {
+        lines.push(t.side === "achat" ? '<span class="warn">Pour un achat, le stop-loss doit être en dessous du prix d’entrée.</span>' : '<span class="warn">Pour une vente, le stop-loss doit être au-dessus du prix d’entrée.</span>');
+      } else {
+        if (tg !== null) {
+          const rr = dir * (tg - e) / Math.abs(e - s);
+          lines.push("Ratio risque/rendement : <b>1 pour " + fr(rr) + "</b>" + (rr < 1 ? ' <span class="warn">(tu risques plus que tu ne vises)</span>' : rr >= 2 ? ' <span class="ok">(bon ratio)</span>' : ""));
+        }
+        if (risk) {
+          const qty = risk / Math.abs(e - s);
+          lines.push("Taille de position : <b>" + qtyFmt(qty) + " unités</b> (valeur ≈ " + fr(qty * e) + " dans la devise du marché)");
+          const cap = num(settings.capital);
+          if (cap) {
+            const pct = risk / cap * 100;
+            lines.push("Risque : <b>" + fr(pct, 1) + " %</b> de ton capital" + (pct > 2 ? ' <span class="warn">(au-dessus de 2 %, réduis le montant)</span>' : ' <span class="ok">(raisonnable)</span>'));
+          }
+        }
+        const c = calc(t);
+        if (!c.open && c.r !== null) lines.push("Résultat : <b>" + rfmt(c.r) + "</b>" + (risk ? " soit <b>" + eur(c.pnl) + "</b>" : ""));
+      }
+    }
+    $("#preview").innerHTML = lines.join("<br>");
   }
   form.addEventListener("input", updatePreview);
+
+  $("#photoInput").addEventListener("change", async e => {
+    const f = e.target.files[0]; if (!f) return;
+    try { pendingPhoto = await compress(f); photoRemoved = false; setThumb(pendingPhoto); }
+    catch(err) { alert("Impossible de lire cette image."); }
+    e.target.value = "";
+  });
+  $("#photoDel").addEventListener("click", () => { pendingPhoto = undefined; photoRemoved = true; setThumb(null); });
+  $("#thumb").addEventListener("click", () => openViewer($("#thumb").src));
+  function openViewer(src){ $("#viewerImg").src = src; $("#viewer").hidden = false; }
+  $("#viewer").addEventListener("click", () => { $("#viewer").hidden = true; });
 
   form.addEventListener("submit", async e => {
     e.preventDefault();
     const t = formData();
     if (!t.market || num(t.entry) === null || num(t.stop) === null || num(t.risk) === null) {
-      $("#preview").innerHTML = "Il manque le <b>marché</b>, le <b>prix d’entrée</b>, le <b>stop-loss</b> ou le <b>montant risqué</b>.";
+      $("#preview").innerHTML = '<span class="warn">Il manque le marché, le prix d’entrée, le stop-loss ou le montant risqué.</span>';
       return;
     }
-    if (editingId) {
-      t.id = editingId; t.created = (trades.find(x => x.id === editingId)||{}).created || Date.now();
-      trades = trades.map(x => x.id === editingId ? t : x);
-    } else {
-      t.id = "t" + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
-      t.created = Date.now();
-      trades.push(t);
-    }
+    const old = editingId ? trades.find(x => x.id === editingId) : null;
+    t.id = old ? old.id : uid("t");
+    t.created = old ? old.created : Date.now();
+    t.hasPhoto = old ? !!old.hasPhoto : false;
+    if (pendingPhoto) { await photoPut(t.id, pendingPhoto); t.hasPhoto = true; }
+    else if (photoRemoved) { await photoDel(t.id); t.hasPhoto = false; }
+    trades = old ? trades.map(x => x.id === old.id ? t : x) : [...trades, t];
+    saveLocal();
     editingId = null;
     render(); show("journal");
-    await persist(t);
   });
 
   $("#del").addEventListener("click", async () => {
     if (!editingId || !confirm("Supprimer ce trade ?")) return;
     const id = editingId;
     trades = trades.filter(x => x.id !== id);
+    saveLocal(); await photoDel(id);
     editingId = null;
     render(); show("journal");
-    await removeRemote(id);
   });
 
-  // ---------- rendu ----------
-  const sorted = () => [...trades].sort((a,b) => (b.date||"").localeCompare(a.date||"") || b.created - a.created);
+  // ---------- journal ----------
+  const sorted = arr => [...arr].sort((a,b) => (b.date||"").localeCompare(a.date||"") || b.created - a.created);
 
-  function render(){
+  function fillFilters(){
+    const strats = [...new Set(trades.map(t => t.strategy).filter(Boolean))].sort();
+    const markets = [...new Set(trades.map(t => t.market).filter(Boolean))].sort();
+    if (filter.strategy && !strats.includes(filter.strategy)) filter.strategy = "";
+    if (filter.market && !markets.includes(filter.market)) filter.market = "";
+    $("#fStrategy").innerHTML = '<option value="">Toutes les stratégies</option>' + strats.map(s => '<option>' + esc(s) + '</option>').join("");
+    $("#fMarket").innerHTML = '<option value="">Tous les marchés</option>' + markets.map(s => '<option>' + esc(s) + '</option>').join("");
+    $("#fStrategy").value = filter.strategy; $("#fMarket").value = filter.market;
+  }
+  $("#fStrategy").addEventListener("change", e => { filter.strategy = e.target.value; renderList(); });
+  $("#fMarket").addEventListener("change", e => { filter.market = e.target.value; renderList(); });
+
+  function render(){ fillFilters(); renderList(); renderHero(); }
+
+  function renderList(){
     const list = $("#list");
     if (!trades.length) {
+      $("#count").textContent = "";
       list.innerHTML = '<div class="empty">Ton journal est vide.<br>Ajoute ton premier trade, même un trade en démo.<br><button class="btn" id="firstAdd">Ajouter un trade</button></div>';
       $("#firstAdd").onclick = () => { editingId = null; show("add"); };
-    } else {
-      list.innerHTML = sorted().map(t => {
-        const c = calc(t);
-        const res = c.open ? '<div class="t-res open">En cours</div>' : '<div class="t-res ' + (c.pnl >= 0 ? "pos" : "neg") + '">' + eur(c.pnl) + '</div>';
-        const d = t.date ? new Date(t.date + "T12:00").toLocaleDateString("fr-FR",{day:"numeric",month:"short"}) : "";
-        return '<button class="trade" data-id="' + esc(t.id) + '">' +
-          '<div class="t-main">' + esc(t.market) + '<span class="t-side">' + (t.side === "vente" ? "Vente" : "Achat") + '</span></div>' + res +
-          '<div class="t-meta">' + esc(d) + ', ' + esc(t.strategy) + (t.plan === "non" ? ", plan non respecté" : "") + '</div>' +
-          '<div class="t-r">' + (c.open ? "" : rfmt(c.r)) + '</div></button>';
-      }).join("");
-      list.querySelectorAll(".trade").forEach(b => b.onclick = () => { const t = trades.find(x => x.id === b.dataset.id); editingId = t.id; fillForm(t); show("add"); });
+      return;
     }
-    renderHero();
+    const shown = sorted(trades).filter(t => {
+      const c = calc(t);
+      if (filter.strategy && t.strategy !== filter.strategy) return false;
+      if (filter.market && t.market !== filter.market) return false;
+      if (filter.status === "open") return c.open;
+      if (filter.status === "win") return !c.open && c.r > 0;
+      if (filter.status === "loss") return !c.open && c.r !== null && c.r <= 0;
+      return true;
+    });
+    $("#count").textContent = shown.length + " trade" + (shown.length > 1 ? "s" : "") + (shown.length !== trades.length ? " sur " + trades.length : "");
+    if (!shown.length) { list.innerHTML = '<div class="empty">Aucun trade ne correspond à ces filtres.</div>'; return; }
+    list.innerHTML = shown.map(t => {
+      const c = calc(t);
+      const res = c.open ? '<div class="t-res open">En cours</div>' : '<div class="t-res ' + (c.pnl >= 0 ? "pos" : "neg") + '">' + eur(c.pnl) + '</div>';
+      const d = t.date ? new Date(t.date + "T12:00").toLocaleDateString("fr-FR",{day:"numeric",month:"short"}) : "";
+      const off = t.plan === "non" || (t.rulesTotal && (t.checks||[]).length < t.rulesTotal);
+      return '<button class="trade" data-id="' + esc(t.id) + '">' +
+        '<div class="t-main">' + esc(t.market) + '<span class="t-side">' + (t.side === "vente" ? "Vente" : "Achat") + '</span>' + (t.hasPhoto ? '<span class="t-photo" aria-label="Capture jointe">📷</span>' : '') + '</div>' + res +
+        '<div class="t-meta">' + esc(d) + ', ' + esc(t.strategy) + (off ? ", hors plan" : "") + '</div>' +
+        '<div class="t-r">' + (c.open ? "" : rfmt(c.r)) + '</div></button>';
+    }).join("");
+    list.querySelectorAll(".trade").forEach(b => b.onclick = () => { const t = trades.find(x => x.id === b.dataset.id); editingId = t.id; show("add"); fillForm(t); });
   }
 
   function closedTrades(){ return trades.map(t => ({t, c:calc(t)})).filter(x => !x.c.open && x.c.r !== null); }
@@ -356,6 +577,11 @@ nav .add{color:var(--accent)}
     $("#heroSub").textContent = closed.length
       ? closed.length + " trade" + (closed.length > 1 ? "s" : "") + " clôturé" + (closed.length > 1 ? "s" : "") + (open ? ", " + open + " en cours" : "")
       : (open ? open + " trade" + (open > 1 ? "s" : "") + " en cours" : "Aucun trade clôturé pour l’instant");
+    // objectif 30
+    const n = closed.length;
+    $("#progTxt").textContent = Math.min(n, GOAL) + "/" + GOAL;
+    $("#progFill").style.width = Math.min(100, n / GOAL * 100) + "%";
+    $("#progMsg").textContent = n >= GOAL ? "Tu as assez de trades pour juger ta stratégie. Va voir tes stats." : n ? "Encore " + (GOAL - n) + " avant de pouvoir juger ta stratégie." : "";
     // courbe
     const svg = $("#curve");
     const pts = [0]; let acc = 0; closed.forEach(x => { acc += x.c.pnl; pts.push(acc); });
@@ -373,13 +599,13 @@ nav .add{color:var(--accent)}
       '<path d="' + d + '" fill="none" stroke="' + color + '" stroke-width="2.5" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>';
   }
 
+  // ---------- stats ----------
   function summarize(arr){
     const n = arr.length;
     const wins = arr.filter(x => x.c.r > 0), losses = arr.filter(x => x.c.r <= 0);
     const avg = a => a.length ? a.reduce((s,x) => s + x.c.r, 0) / a.length : 0;
     return { n, winRate: n ? wins.length / n : 0, avgWin: avg(wins), avgLoss: avg(losses), exp: avg(arr), pnl: arr.reduce((s,x) => s + x.c.pnl, 0) };
   }
-
   function renderStats(){
     const closed = closedTrades();
     const body = $("#statsBody");
@@ -393,35 +619,66 @@ nav .add{color:var(--accent)}
       '<div class="stat"><div class="v" style="color:var(--loss)">' + rfmt(s.avgLoss) + '</div><div class="k">Perte moyenne</div></div>' +
       '</div>' +
       '<div class="stats" style="margin-top:12px;grid-template-columns:1fr"><div class="stat"><div class="v" style="color:' + (s.exp >= 0 ? "var(--gain)" : "var(--loss)") + '">' + rfmt(s.exp) + ' par trade</div><div class="k">Espérance : ce que tu gagnes ou perds en moyenne à chaque trade</div></div></div>' +
-      '<p class="explain">« R » = ton risque. +2 R veut dire que tu as gagné deux fois ce que tu avais risqué. Si l’espérance est positive sur 30 trades ou plus, ta stratégie a peut-être un avantage.' + (s.n < 30 ? " Avec " + s.n + " trade" + (s.n > 1 ? "s" : "") + ", c’est encore trop tôt pour conclure." : "") + '</p>';
-
-    const group = key => {
+      '<p class="explain">« R » = ton risque. +2 R veut dire que tu as gagné deux fois ce que tu avais risqué. Si l’espérance est positive sur 30 trades ou plus, ta stratégie a peut-être un avantage.' + (s.n < GOAL ? " Avec " + s.n + " trade" + (s.n > 1 ? "s" : "") + ", c’est encore trop tôt pour conclure." : "") + '</p>';
+    const group = (fn) => {
       const m = {};
-      closed.forEach(x => { const k = x.t[key] || "—"; (m[k] = m[k] || []).push(x); });
+      closed.forEach(x => { const k = fn(x.t); if (k === null) return; (m[k] = m[k] || []).push(x); });
       return Object.entries(m).map(([k,a]) => [k, summarize(a)]).sort((a,b) => b[1].n - a[1].n);
     };
-    const table = (title, rows, label) => '<h2>' + title + '</h2><div class="tablewrap"><table><thead><tr><th>' + label + '</th><th>Trades</th><th>Réussite</th><th>Espérance</th><th>Total</th></tr></thead><tbody>' +
+    const table = (title, rows, label) => !rows.length ? "" : '<h2>' + title + '</h2><div class="tablewrap"><table><thead><tr><th>' + label + '</th><th>Trades</th><th>Réussite</th><th>Espérance</th><th>Total</th></tr></thead><tbody>' +
       rows.map(([k,v]) => '<tr><td>' + esc(k) + '</td><td>' + v.n + '</td><td>' + pct(v.winRate) + '</td><td style="color:' + (v.exp >= 0 ? "var(--gain)" : "var(--loss)") + '">' + rfmt(v.exp) + '</td><td>' + eur(v.pnl) + '</td></tr>').join("") +
       '</tbody></table></div>';
-
-    html += table("Par stratégie", group("strategy"), "Stratégie");
-    const plan = group("plan").map(([k,v]) => [k === "oui" ? "Plan respecté" : "Plan non respecté", v]);
-    html += table("Discipline", plan, "Plan");
-    html += table("Par émotion", group("emotion"), "Émotion");
+    html += table("Par stratégie", group(t => t.strategy || "—"), "Stratégie");
+    html += table("Par marché", group(t => t.market || "—"), "Marché");
+    html += table("Discipline", group(t => t.plan === "non" ? "Plan non respecté" : "Plan respecté"), "Plan");
+    html += table("Checklist", group(t => t.rulesTotal ? ((t.checks||[]).length >= t.rulesTotal ? "Complète" : "Incomplète") : null), "Checklist");
+    html += table("Par émotion", group(t => t.emotion || "—"), "Émotion");
     body.innerHTML = html;
   }
 
-  // ---------- démarrage ----------
-  trades = loadLocal();
-  resetForm();
-  render();
-  setStatus("Enregistré sur ce téléphone");
-  if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(()=>{});
-  if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(()=>{});
+  // ---------- réglages ----------
+  $("#capital").addEventListener("change", e => { settings.capital = e.target.value.trim(); saveSettings(); });
+  function renderSettings(){
+    $("#capital").value = settings.capital || "";
+    $("#stratList").innerHTML = settings.strategies.map(s =>
+      '<div class="strat" data-id="' + esc(s.id) + '">' +
+        '<input type="text" class="name" data-act="rename" value="' + esc(s.name) + '" aria-label="Nom de la stratégie">' +
+        (s.rules.length ? s.rules.map((r,i) => '<div class="rule"><span>' + esc(r) + '</span><button type="button" data-act="delrule" data-i="' + i + '" aria-label="Supprimer la règle">×</button></div>').join("") : '<div class="small">Aucune règle pour l’instant.</div>') +
+        '<div class="inline"><input type="text" data-act="newrule" placeholder="Nouvelle règle"><button type="button" class="btn" data-act="addrule">Ajouter</button></div>' +
+        (settings.strategies.length > 1 ? '<button type="button" class="linkbtn" data-act="delstrat" style="justify-self:start;padding-left:0">Supprimer la stratégie</button>' : '') +
+      '</div>').join("");
+  }
+  $("#stratList").addEventListener("click", e => {
+    const b = e.target.closest("button"); if (!b) return;
+    const box = b.closest(".strat"); const s = settings.strategies.find(x => x.id === box.dataset.id); if (!s) return;
+    if (b.dataset.act === "delrule") { s.rules.splice(+b.dataset.i, 1); }
+    else if (b.dataset.act === "addrule") { const v = box.querySelector('[data-act="newrule"]').value.trim(); if (!v) return; s.rules.push(v); }
+    else if (b.dataset.act === "delstrat") { if (!confirm("Supprimer la stratégie « " + s.name + " » ? Tes trades passés la gardent.")) return; settings.strategies = settings.strategies.filter(x => x !== s); }
+    saveSettings(); renderSettings();
+  });
+  $("#stratList").addEventListener("keydown", e => {
+    if (e.key === "Enter" && e.target.dataset.act === "newrule") { e.preventDefault(); e.target.closest(".strat").querySelector('[data-act="addrule"]').click(); }
+  });
+  $("#stratList").addEventListener("change", e => {
+    if (e.target.dataset.act !== "rename") return;
+    const s = settings.strategies.find(x => x.id === e.target.closest(".strat").dataset.id);
+    const v = e.target.value.trim();
+    if (!v || settings.strategies.some(x => x !== s && x.name === v)) { e.target.value = s.name; return; }
+    trades.forEach(t => { if (t.strategy === s.name) t.strategy = v; });
+    s.name = v; saveSettings(); saveLocal(); render();
+  });
+  $("#addStrat").addEventListener("click", () => {
+    const v = $("#newStrat").value.trim(); if (!v) return;
+    if (settings.strategies.some(x => x.name === v)) { alert("Cette stratégie existe déjà."); return; }
+    settings.strategies.push({id: uid("s"), name: v, rules: []});
+    $("#newStrat").value = ""; saveSettings(); renderSettings();
+  });
 
   // ---------- sauvegarde ----------
   $("#exportBtn").addEventListener("click", async () => {
-    const data = JSON.stringify({app:"journal-trading", version:1, exported:new Date().toISOString(), trades}, null, 2);
+    const photos = {};
+    for (const t of trades) if (t.hasPhoto) { const p = await photoGet(t.id); if (p) photos[t.id] = p; }
+    const data = JSON.stringify({app:"journal-trading", version:2, exported:new Date().toISOString(), trades, settings, photos});
     const name = "journal-trading-" + new Date().toISOString().slice(0,10) + ".json";
     const file = new File([data], name, {type:"application/json"});
     try {
@@ -439,14 +696,30 @@ nav .add{color:var(--accent)}
       if (!Array.isArray(arr)) throw new Error();
       const ids = new Set(trades.map(t => t.id));
       let added = 0;
-      arr.forEach(t => { if (t && t.id && !ids.has(t.id)) { trades.push(t); added++; } });
-      saveLocal(); render(); renderStats();
+      for (const t of arr) {
+        if (!t || !t.id || ids.has(t.id)) continue;
+        if (j.photos && j.photos[t.id]) { await photoPut(t.id, j.photos[t.id]); t.hasPhoto = true; } else t.hasPhoto = false;
+        trades.push(t); added++;
+      }
+      if (j.settings && Array.isArray(j.settings.strategies)) {
+        j.settings.strategies.forEach(s => { if (s && s.name && !settings.strategies.some(x => x.name === s.name)) settings.strategies.push({id: uid("s"), name: s.name, rules: Array.isArray(s.rules) ? s.rules : []}); });
+        if (!settings.capital && j.settings.capital) settings.capital = j.settings.capital;
+        saveSettings();
+      }
+      saveLocal(); render(); renderSettings();
       $("#backupMsg").textContent = added + " trade" + (added > 1 ? "s" : "") + " importé" + (added > 1 ? "s" : "") + ".";
     } catch(err) {
       $("#backupMsg").textContent = "Ce fichier n’est pas une sauvegarde du journal.";
     }
     e.target.value = "";
   });
+
+  // ---------- démarrage ----------
+  loadAll();
+  resetForm();
+  render();
+  if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(()=>{});
+  if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(()=>{});
 })();
 </script>
 </body>
